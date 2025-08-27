@@ -1,33 +1,19 @@
 using UnityEngine;
-[RequireComponent (typeof(Rigidbody))]
-public class PlayerController : MonoBehaviour
+using Unity.Netcode;
+using Unity.Netcode.Components;
+[RequireComponent(typeof(NetworkObject))]
+public class PlayerController : NetworkBehaviour
 {
     [Header("Characteristics")]
-    private Rigidbody rb;
     [SerializeField] private float speed;
-    private Vector2 inputMove;
-    private void Reset()
+
+    [Header("Input")]
+    private float horizontal;
+    private float vertical;
+    private void Update()
     {
-        rb = GetComponent<Rigidbody>();
-    }
-    private void OnEnable()
-    {
-        InputReader.OnMovePlayer += InputMove;
-    }
-    private void OnDisable()
-    {
-        InputReader.OnMovePlayer -= InputMove;
-    }
-    private void Awake()
-    {
-        rb = GetComponent<Rigidbody>();
-    }
-    private void FixedUpdate()
-    {
-        rb.linearVelocity = new Vector3(inputMove.x* speed, rb.linearVelocity.y, inputMove.y*speed);
-    }
-    private void InputMove(Vector2 value)
-    {
-        inputMove = value;
+        horizontal = Input.GetAxis("Horizontal") * speed * Time.deltaTime;
+        vertical = Input.GetAxis("Vertical") * speed * Time.deltaTime;
+        transform.position += new Vector3(horizontal, 0, vertical);
     }
 }
