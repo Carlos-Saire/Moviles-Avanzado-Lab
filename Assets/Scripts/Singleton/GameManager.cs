@@ -1,28 +1,37 @@
+using System;
 using UnityEngine;
 using Unity.Netcode;
-[RequireComponent(typeof(NetworkObject))]
+
 public class GameManager : NetworkBehaviour
 {
-    private GameManager instance;
+    private static GameManager instance;
 
-    [Header("Prefab Player")]
-    [SerializeField] private Transform prefabPlayer;
+    [Header("Player Prefab")]
+    [SerializeField] private Transform playerPrefab;
     private void Awake()
     {
-        if(instance == null)
+        if (instance == null)
         {
             instance = this;
-            DontDestroyOnLoad(gameObject);
+            DontDestroyOnLoad(gameObject);   
         }
         else
         {
             Destroy(gameObject);
         }
     }
-    public override void OnNetworkDespawn()
+    public override void OnNetworkSpawn()
     {
-        base.OnNetworkDespawn();
-        Debug.Log(NetworkManager.Singleton.LocalClientId);
+        print(NetworkManager.Singleton.LocalClientId);
+        InstancePlayerRpc(NetworkManager.Singleton.LocalClientId);
     }
-    public GameManager Instance => instance;
+    [Rpc(SendTo.Server)]
+    private void InstancePlayerRpc(ulong ownerID)
+    {
+        Transform player = Instantiate(playerPrefab);
+        player.GetComponent<NetworkObject>().SpawnWithOwnership(ownerID, true);
+    }
+
+    public static GameManager Instance => instance;
 }
+
