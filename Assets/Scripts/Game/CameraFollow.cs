@@ -1,13 +1,9 @@
 using UnityEngine;
+using Unity.Cinemachine;
 
 public class CameraFollow : MonoBehaviour
 {
-    private Transform target;
-
-    [Header("Settings")]
-    [SerializeField] private Vector3 offset;
-    [SerializeField] private float smoothSpeed;
-    private Vector3 desiredPosition;
+    private CinemachineCamera _cam; 
     private void OnEnable()
     {
         PlayerController.OnplayerPosition += SetTarget;
@@ -16,17 +12,12 @@ public class CameraFollow : MonoBehaviour
     {
         PlayerController.OnplayerPosition -= SetTarget;
     }
-    private void LateUpdate()
+    private void Awake()
     {
-        if (target == null) return;
-
-        desiredPosition = target.position + target.TransformDirection(offset);
-        transform.position = Vector3.Lerp(transform.position, desiredPosition, smoothSpeed * Time.deltaTime);
-
-        transform.LookAt(target);
+        _cam = GetComponent<CinemachineCamera>();
     }
     private void SetTarget(Transform player)
     {
-        target = player;
+        _cam.Target.TrackingTarget= player;
     }
 }

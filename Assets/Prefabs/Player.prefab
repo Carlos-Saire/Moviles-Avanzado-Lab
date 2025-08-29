@@ -243,7 +243,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
-  speed: 50
+  speed: 10
   jumpForce: 5
   distance: 1.6
   layer:

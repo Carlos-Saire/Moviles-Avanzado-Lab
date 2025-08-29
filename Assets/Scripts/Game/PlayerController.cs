@@ -24,17 +24,25 @@ public class PlayerController : NetworkBehaviour
     [Header("Raycast Jump")]
     [SerializeField] private float distance;
     [SerializeField] private LayerMask layer;
+
+    [Header("Camera")]
+    private Transform cameraMain;
+    private Vector3 camForward;
+    private Vector3 camRight;
+
+    private Vector3 direction;
+
     private void Reset()
     {
         rb = GetComponent<Rigidbody>();
-        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY |
-            RigidbodyConstraints.FreezeRotationZ;
+        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
         GetComponent<NetworkRigidbody>().AutoUpdateKinematicState = false;
     }
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        cameraMain = Camera.main.transform;
     }
     private void Start()
     {
@@ -48,11 +56,18 @@ public class PlayerController : NetworkBehaviour
         horizontal = Input.GetAxis("Horizontal")*speed;
         vertical = Input.GetAxis("Vertical")* speed;
         isJump = Input.GetKeyDown(KeyCode.Space);
+        direction = GetMoveDirection();
         Jump();
+
     }
     private void FixedUpdate()
     {
-        rb.linearVelocity = new Vector3(horizontal* Time.fixedDeltaTime, rb.linearVelocity.y,vertical * Time.fixedDeltaTime);
+        rb.linearVelocity = new Vector3(direction.x, rb.linearVelocity.y, direction.z);
+    }
+    private void OnDrawGizmos()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawLine(transform.position, transform.position + Vector3.down * distance);
     }
     private void Jump()
     {
@@ -61,13 +76,15 @@ public class PlayerController : NetworkBehaviour
             rb.AddForce(Vector3.up*jumpForce,ForceMode.Impulse);
         }
     }
+    private Vector3 GetMoveDirection()
+    {
+        camForward = cameraMain.transform.forward.normalized;
+        camRight = cameraMain.transform.right.normalized;
+        return camRight * horizontal + camForward * vertical;
+    }
     private bool CheckGround()
     {
         return Physics.Raycast(transform.position, Vector3.down, distance, layer);
     }
-    private void OnDrawGizmos()
-    {
-        Gizmos.color = Color.red;
-        Gizmos.DrawLine(transform.position, transform.position + Vector3.down * distance);
-    }
+    
 }
