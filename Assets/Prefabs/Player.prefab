@@ -15,8 +15,8 @@ GameObject:
   - component: {fileID: 2317570002182064128}
   - component: {fileID: 8921808305249228537}
   - component: {fileID: 5430078834407825698}
-  - component: {fileID: 2304826724808992552}
-  - component: {fileID: -518722168227049606}
+  - component: {fileID: 7151920931729723740}
+  - component: {fileID: 7374253685957817243}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -140,7 +140,7 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 112
+  m_Constraints: 80
   m_CollisionDetection: 0
 --- !u!114 &8921808305249228537
 MonoBehaviour:
@@ -213,7 +213,7 @@ MonoBehaviour:
   SwitchTransformSpaceWhenParented: 0
   Interpolate: 1
   SlerpPosition: 0
---- !u!114 &2304826724808992552
+--- !u!114 &7151920931729723740
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -230,7 +230,7 @@ MonoBehaviour:
   UseRigidBodyForMotion: 0
   AutoUpdateKinematicState: 0
   AutoSetKinematicOnDespawn: 1
---- !u!114 &-518722168227049606
+--- !u!114 &7374253685957817243
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -245,7 +245,7 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   speed: 50
   jumpForce: 5
-  distance: 1.5
+  distance: 1.6
   layer:
     serializedVersion: 2
     m_Bits: 8

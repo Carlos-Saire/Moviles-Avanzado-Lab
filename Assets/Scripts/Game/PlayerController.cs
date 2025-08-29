@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using Unity.Netcode;
 using Unity.Netcode.Components;
+
 [RequireComponent(typeof(NetworkObject))]
 [RequireComponent(typeof(NetworkTransform))]
 [RequireComponent(typeof(Rigidbody))]
@@ -26,6 +27,10 @@ public class PlayerController : NetworkBehaviour
     private void Reset()
     {
         rb = GetComponent<Rigidbody>();
+        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY |
+            RigidbodyConstraints.FreezeRotationZ;
+
+        GetComponent<NetworkRigidbody>().AutoUpdateKinematicState = false;
     }
     private void Awake()
     {
@@ -34,7 +39,9 @@ public class PlayerController : NetworkBehaviour
     private void Start()
     {
         GetComponent<NetworkTransform>().AuthorityMode=NetworkTransform.AuthorityModes.Owner;
-        OnplayerPosition?.Invoke(transform);
+
+        if (IsOwner)
+            OnplayerPosition?.Invoke(transform);
     }
     private void Update()
     {
