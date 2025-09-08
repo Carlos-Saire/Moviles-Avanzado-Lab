@@ -6,7 +6,6 @@ using Unity.Netcode.Components;
 [RequireComponent(typeof(NetworkObject))]
 [RequireComponent(typeof(NetworkTransform))]
 [RequireComponent(typeof(Rigidbody))]
-[RequireComponent(typeof(NetworkRigidbody))]
 public class PlayerController : NetworkBehaviour
 {
     public static event Action<Transform> OnplayerPosition;
@@ -41,6 +40,18 @@ public class PlayerController : NetworkBehaviour
 
         GetComponent<NetworkRigidbody>().AutoUpdateKinematicState = false;
     }
+    private void OnEnable()
+    {
+
+        InputReader.OnJump+= JumpRpc;
+     
+        
+    }
+    private void OnDisable()
+    {
+
+        InputReader.OnJump-= JumpRpc;
+    }
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -61,11 +72,13 @@ public class PlayerController : NetworkBehaviour
         vertical = Input.GetAxis("Vertical")* speed;
         isJump = Input.GetKeyDown(KeyCode.Space);
         direction = GetMoveDirection();
-        JumpRpc();
+        JumpAnimatorRpc();
 
     }
     private void FixedUpdate()
     {
+        if (!IsOwner) return;
+
         Debug.Log(direction);
         MoveRpc(direction);
     }
@@ -81,23 +94,20 @@ public class PlayerController : NetworkBehaviour
         camRight = cameraMain.transform.right.normalized;
         return camRight * horizontal + camForward * vertical;
     }
-    private bool CheckGround()
-    {
-        return Physics.Raycast(transform.position, Vector3.down, distance, layer);
-    }
     [Rpc(SendTo.Server)]
-    private void JumpRpc()
+    private void JumpRpc(bool isJump)
     {
-        if (isJump && CheckGround())
+        if (!IsOwner) return;
+
+        if (isJump && Physics.Raycast(transform.position, Vector3.down, distance, layer))
         {
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
         }
-        JumpAnimatorRpc();
     }
     [Rpc(SendTo.Server)]
     private void JumpAnimatorRpc()
     {
-        if (CheckGround())
+        if (Physics.Raycast(transform.position, Vector3.down, distance, layer))
         {
             animator.SetBool("Grounded", true);
             animator.SetBool("FreeFall", false);
