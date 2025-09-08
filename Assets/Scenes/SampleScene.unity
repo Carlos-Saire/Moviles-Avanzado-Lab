@@ -238,6 +238,7 @@ GameObject:
   - component: {fileID: 293051574}
   - component: {fileID: 293051573}
   - component: {fileID: 293051578}
+  - component: {fileID: 293051579}
   m_Layer: 0
   m_Name: FreeLook Camera
   m_TagString: Untagged
@@ -253,8 +254,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 293051571}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.2534014, y: -0.000000025769307, z: 0.000000006750299, w: 0.9673612}
-  m_LocalPosition: {x: -0.6235621, y: 3.24, z: -3.4240716}
+  m_LocalRotation: {x: 0.47185794, y: -4.9863284e-15, z: 3.0873855e-15, w: 0.8816746}
+  m_LocalPosition: {x: 0.7004328, y: 2.819999, z: -1.462911}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -390,10 +391,10 @@ MonoBehaviour:
       Radius: 2
       Height: 5
     Center:
-      Radius: 4
-      Height: 2.25
+      Radius: 1.88
+      Height: 2.82
     Bottom:
-      Radius: 2.5
+      Radius: 0.98
       Height: 0.1
     SplineCurvature: 0.5
   RecenteringTarget: 2
@@ -482,6 +483,36 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b3d4d8b3919b1f408896163e8443ca1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &293051579
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 293051571}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca7de3aefa901374ba29464584a3109a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  CameraRadius: 0.4
+  Decollision:
+    Enabled: 0
+    ObstacleLayers:
+      serializedVersion: 2
+      m_Bits: 1
+    UseFollowTarget:
+      Enabled: 0
+      YOffset: 0
+    Damping: 0.5
+    SmoothingTime: 0
+  TerrainResolution:
+    Enabled: 1
+    TerrainLayers:
+      serializedVersion: 2
+      m_Bits: 1
+    MaximumRaycast: 10
+    Damping: 0.5
 --- !u!1 &330585543
 GameObject:
   m_ObjectHideFlags: 0
@@ -569,8 +600,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.2534014, y: -0.000000025769307, z: 0.0000000067503, w: 0.9673612}
-  m_LocalPosition: {x: -0.6235621, y: 3.24, z: -3.4240716}
+  m_LocalRotation: {x: 0.47185796, y: -4.6722414e-15, z: 2.5005078e-15, w: 0.8816746}
+  m_LocalPosition: {x: 0.7004328, y: 2.819999, z: -1.462911}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -926,7 +957,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
-  playerPrefab: {fileID: 5407901498208407250, guid: 75cda015f5e1707469a92e7141ddd0c8, type: 3}
+  BuffSpawnCount: 4
+  currentBuffCount: 0
+  playerPrefab: {fileID: 6413156394360935872, guid: bc22fd2681b0f36499e4f8b779fbaf6d, type: 3}
+  buffPrefab: {fileID: 6288221887685173636, guid: dcd23dba2b24eca439e130de9c07f41f, type: 3}
 --- !u!1 &1900363530
 GameObject:
   m_ObjectHideFlags: 0

@@ -14,7 +14,9 @@ public class PlayerController : NetworkBehaviour
     [Header("Characteristics")]
     [SerializeField] private float speed;
     [SerializeField] private float jumpForce;
-    private Rigidbody rb;
+    [SerializeField] private Transform targetCamera;
+    public Rigidbody rb;
+    private Animator animator;
 
     [Header("Input")]
     private float horizontal;
@@ -42,40 +44,37 @@ public class PlayerController : NetworkBehaviour
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        animator = GetComponent<Animator>();
         cameraMain = Camera.main.transform;
     }
     private void Start()
     {
-        GetComponent<NetworkTransform>().AuthorityMode=NetworkTransform.AuthorityModes.Owner;
 
-        if (IsOwner)
-            OnplayerPosition?.Invoke(transform);
+        if (IsOwner )
+            OnplayerPosition?.Invoke(targetCamera);
     }
     private void Update()
     {
+        if (!IsOwner) return;
+
         horizontal = Input.GetAxis("Horizontal")*speed;
         vertical = Input.GetAxis("Vertical")* speed;
         isJump = Input.GetKeyDown(KeyCode.Space);
         direction = GetMoveDirection();
-        Jump();
+        JumpRpc();
 
     }
     private void FixedUpdate()
     {
-        rb.linearVelocity = new Vector3(direction.x, rb.linearVelocity.y, direction.z);
+        Debug.Log(direction);
+        MoveRpc(direction);
     }
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.red;
         Gizmos.DrawLine(transform.position, transform.position + Vector3.down * distance);
     }
-    private void Jump()
-    {
-        if(isJump&&CheckGround())
-        {
-            rb.AddForce(Vector3.up*jumpForce,ForceMode.Impulse);
-        }
-    }
+    
     private Vector3 GetMoveDirection()
     {
         camForward = cameraMain.transform.forward.normalized;
@@ -86,5 +85,34 @@ public class PlayerController : NetworkBehaviour
     {
         return Physics.Raycast(transform.position, Vector3.down, distance, layer);
     }
-    
+    [Rpc(SendTo.Server)]
+    private void JumpRpc()
+    {
+        if (isJump && CheckGround())
+        {
+            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+        }
+        JumpAnimatorRpc();
+    }
+    [Rpc(SendTo.Server)]
+    private void JumpAnimatorRpc()
+    {
+        if (CheckGround())
+        {
+            animator.SetBool("Grounded", true);
+            animator.SetBool("FreeFall", false);
+        }
+        else
+        {
+            animator.SetBool("Grounded", false);
+            animator.SetBool("FreeFall", true);
+        }
+    }
+    [Rpc(SendTo.Server)]
+    private void MoveRpc(Vector3 direction)
+    {
+        Debug.Log("RPC :" + direction);
+
+        rb.linearVelocity = new Vector3(direction.x, rb.linearVelocity.y, direction.z);
+    }
 }
