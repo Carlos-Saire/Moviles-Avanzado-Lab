@@ -1,13 +1,19 @@
 using UnityEngine;
 using Unity.Netcode;
 using Unity.Netcode.Components;
+using System;
 
 [RequireComponent(typeof(NetworkObject))]
 [RequireComponent(typeof(NetworkTransform))]
 public class Enemy : NetworkBehaviour
 {
+    public event Action<int> OnLife;
+
     [Header("Characteristics")]
     [SerializeField] private float speed = 3f;
+    public int life;
+
+    private NetworkVariable<int> health = new NetworkVariable<int>();
 
     [Header("Target")]
     private Transform currentTarget;
@@ -19,21 +25,62 @@ public class Enemy : NetworkBehaviour
     [Header("Gizmos")]
     [SerializeField] private Color color = Color.red;
 
+    public bool IsDead => health.Value <= 0;
+
+    private void Start()
+    {
+        if (IsOwner)
+        {
+            health.Value = life;
+        }
+    }
     private void Update()
     {
+        if (!IsOwner) return; 
         CheckVisionPlayer();
         if (currentTarget == null) return;
 
-        if(Vector3.Distance(transform.position, currentTarget.position) > 0)
+        if (Vector3.Distance(transform.position, currentTarget.position) > 0)
         {
-            transform.position = Vector3.MoveTowards(transform.position,currentTarget.position,speed * Time.deltaTime);
+            transform.position = Vector3.MoveTowards(
+                transform.position,
+                currentTarget.position,
+                speed * Time.deltaTime
+            );
         }
     }
 
+    private void OnTriggerEnter(Collider other)
+    {
+        if (!IsOwner) return;
+
+        if (other.CompareTag("Player"))
+        {
+            DestroyEnemyRpc();
+        }
+        else if (other.CompareTag("Bullet"))
+        {
+            TakeDamageRpc(1);
+            OnLife?.Invoke(health.Value);
+        }
+    }
     private void OnDrawGizmos()
     {
         Gizmos.color = color;
         Gizmos.DrawWireSphere(transform.position, radius);
+    }
+    [Rpc(SendTo.Server)]
+    private void TakeDamageRpc(int damage)
+    {
+        health.Value -= damage;
+
+        if (health.Value <= 0)
+            DestroyEnemyRpc();
+    }
+    [Rpc(SendTo.Server)]
+    private void DestroyEnemyRpc()
+    {
+        GetComponent<NetworkObject>().Despawn(true);
     }
 
     private void CheckVisionPlayer()
@@ -61,16 +108,6 @@ public class Enemy : NetworkBehaviour
 
         currentTarget = nearestTarget;
     }
-    private void OnTriggerEnter(Collider other)
-    {
-        if (other.CompareTag("Player"))
-        {
-            DestroyEnemyRpc();
-        }
-    }
-    [Rpc(SendTo.Server)]
-    private void DestroyEnemyRpc()
-    {
-        GetComponent<NetworkObject>().Despawn(true);
-    }
+
+
 }

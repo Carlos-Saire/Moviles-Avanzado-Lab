@@ -3,7 +3,6 @@ using Unity.Netcode;
 public class BulletController : NetworkBehaviour
 {
     private Rigidbody rb;
-    private NetworkObject thisObject;
     [SerializeField] private float speed;
     private void Awake()
     {
@@ -21,6 +20,6 @@ public class BulletController : NetworkBehaviour
     [Rpc(SendTo.Server)]
     private void DestroyRpc()
     {
-        thisObject.Despawn();
+        GetComponent<NetworkObject>().Despawn();
     }
 }

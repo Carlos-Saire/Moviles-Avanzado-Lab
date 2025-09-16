@@ -4,6 +4,13 @@ using Unity.Netcode;
 public class WeaponController : NetworkBehaviour
 {
     [SerializeField] private Transform bullet;
+    private Transform _cam;
+    private void Start()
+    {
+        if (!IsOwner) return;
+
+        _cam = Camera.main.transform;
+    }
     private void Update()
     {
         if (!IsOwner) return;
@@ -17,6 +24,6 @@ public class WeaponController : NetworkBehaviour
     {
         Transform go = Instantiate(bullet, transform.position, Quaternion.identity);
         go.GetComponent<NetworkObject>().Spawn(true);
-        go.GetComponent<BulletController>().DirectionBullet(transform.forward);
+        go.GetComponent<BulletController>().DirectionBullet(_cam.forward);
     }
 }

@@ -8,12 +8,13 @@ using Unity.Netcode.Components;
 [RequireComponent(typeof(Rigidbody))]
 public class PlayerController : NetworkBehaviour
 {
-    public static event Action<Transform> OnplayerPosition;
+    public static event Action<Transform,Transform,Transform> OnplayerPosition;
 
     [Header("Characteristics")]
     [SerializeField] private float speed;
     [SerializeField] private float jumpForce;
     [SerializeField] private Transform targetCamera;
+    [SerializeField] private Transform targetCombatCam;
     public Rigidbody rb;
     private Animator animator;
 
@@ -42,9 +43,7 @@ public class PlayerController : NetworkBehaviour
     }
     private void OnEnable()
     {
-
         InputReader.OnJump+= JumpRpc;
-     
         
     }
     private void OnDisable()
@@ -61,8 +60,10 @@ public class PlayerController : NetworkBehaviour
     private void Start()
     {
 
-        if (IsOwner )
-            OnplayerPosition?.Invoke(targetCamera);
+        if (IsOwner)
+        {
+            OnplayerPosition?.Invoke(targetCamera, targetCombatCam,transform);
+        }
     }
     private void Update()
     {
@@ -79,7 +80,6 @@ public class PlayerController : NetworkBehaviour
     {
         if (!IsOwner) return;
 
-        Debug.Log(direction);
         MoveRpc(direction);
     }
     private void OnDrawGizmos()
@@ -121,8 +121,6 @@ public class PlayerController : NetworkBehaviour
     [Rpc(SendTo.Server)]
     private void MoveRpc(Vector3 direction)
     {
-        Debug.Log("RPC :" + direction);
-
         rb.linearVelocity = new Vector3(direction.x, rb.linearVelocity.y, direction.z);
     }
 }
