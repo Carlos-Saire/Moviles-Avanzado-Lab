@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using Unity.Netcode;
 using Unity.Netcode.Components;
+using Unity.Collections;
 
 [RequireComponent(typeof(NetworkObject))]
 [RequireComponent(typeof(NetworkTransform))]
@@ -9,6 +10,7 @@ using Unity.Netcode.Components;
 public class PlayerController : NetworkBehaviour
 {
     public static event Action<Transform> OnplayerPosition;
+    public static event Func<PlayerData> OnDead;
 
     [Header("Characteristics")]
     [SerializeField] private float speed;
@@ -33,6 +35,11 @@ public class PlayerController : NetworkBehaviour
 
     private Vector3 direction;
 
+    public NetworkVariable<FixedString32Bytes> accountID = new();
+    public NetworkVariable<int> health = new();
+    public NetworkVariable<int> attack = new();
+
+    public bool isDead => health.Value <= 0;
     private void Reset()
     {
         rb = GetComponent<Rigidbody>();
@@ -79,7 +86,6 @@ public class PlayerController : NetworkBehaviour
     {
         if (!IsOwner) return;
 
-        Debug.Log(direction);
         MoveRpc(direction);
     }
     private void OnDrawGizmos()
@@ -87,13 +93,37 @@ public class PlayerController : NetworkBehaviour
         Gizmos.color = Color.red;
         Gizmos.DrawLine(transform.position, transform.position + Vector3.down * distance);
     }
-    
+    public override void OnNetworkDespawn()
+    {
+        GameManager.Instance.playerStatesByAccountID[accountID.Value.ToString()] = new PlayerData(accountID.ToString(), transform.position, health.Value, attack.Value);
+        print("Jugador se ha desconectado: " + NetworkManager.Singleton.LocalClientId + ", y se ha guardado la data de: " + accountID.Value);
+    }
+    public void Damage(int damage)
+    {
+        health.Value -= damage;
+
+        if (isDead)
+        {
+            PlayerData playerData = OnDead?.Invoke();
+            health.Value = playerData.health;
+            attack.Value = playerData.attack;
+            transform.position = playerData.position;
+        }
+    }
     private Vector3 GetMoveDirection()
     {
         camForward = cameraMain.transform.forward.normalized;
         camRight = cameraMain.transform.right.normalized;
         return camRight * horizontal + camForward * vertical;
     }
+    public void SetData(PlayerData playerData)
+    {
+        accountID.Value = playerData.accountID;
+        health.Value = playerData.health;
+        attack.Value = playerData.attack;
+        transform.position = playerData.position;
+    }
+
     [Rpc(SendTo.Server)]
     private void JumpRpc(bool isJump)
     {
@@ -121,8 +151,22 @@ public class PlayerController : NetworkBehaviour
     [Rpc(SendTo.Server)]
     private void MoveRpc(Vector3 direction)
     {
-        Debug.Log("RPC :" + direction);
 
         rb.linearVelocity = new Vector3(direction.x, rb.linearVelocity.y, direction.z);
+    }
+}
+public class PlayerData
+{
+    public string accountID;
+    public Vector3 position;
+    public int health;
+    public int attack;
+
+    public PlayerData(string id, Vector3 pos, int hp, int atk)
+    {
+        accountID = id;
+        position = pos;
+        health = hp;
+        attack = atk;
     }
 }

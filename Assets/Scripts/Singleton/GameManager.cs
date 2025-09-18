@@ -1,58 +1,106 @@
 using UnityEngine;
 using Unity.Netcode;
-
+using System;
+using System.Collections.Generic;
+using UnityEngine.AI;
+using Random = UnityEngine.Random;
 public class GameManager : NetworkBehaviour
 {
-    private static GameManager instance;
+    public static GameManager Instance;
+    public GameObject playerPrefab;
+    public Dictionary<string, PlayerData> playerStatesByAccountID = new();
 
+    public Action OnConnection;
 
-    public float BuffSpawnCount = 4;
-    public float currentBuffCount = 0;
-
-
-    [Header("Player Prefab")]
-    [SerializeField] private Transform playerPrefab;
-    [SerializeField] private GameObject buffPrefab;
-
-    private void Awake()
+    [SerializeField] private float radius = 10f;
+    private void OnEnable()
     {
-        if (instance == null)
+        PlayerController.OnDead += Set;
+    }
+    private void OnDisable()
+    {
+        PlayerController.OnDead -= Set;
+
+    }
+    public void Awake()
+    {
+        if (Instance == null)
         {
-            instance = this;
-            DontDestroyOnLoad(gameObject);   
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
         }
         else
         {
             Destroy(gameObject);
         }
-    }
-    void Update()
-    {
-        if (IsServer && NetworkManager.Singleton.ConnectedClients.Count >= 2)
-        {
-            currentBuffCount += Time.deltaTime;
-            if (currentBuffCount > BuffSpawnCount)
-            {
-                Vector3 randomPos = new Vector3(Random.Range(-8, 8), 0.5f, Random.Range(-8, 8));
-                GameObject buff = Instantiate(buffPrefab, randomPos, Quaternion.identity);
-                buff.GetComponent<NetworkObject>().Spawn(true);
-                currentBuffCount = 0;
-            }
-        }
-    }
 
+    }
     public override void OnNetworkSpawn()
     {
-        print(NetworkManager.Singleton.LocalClientId);
-        InstancePlayerRpc(NetworkManager.Singleton.LocalClientId);
+        if (IsServer)
+            NetworkManager.Singleton.OnClientDisconnectCallback += HandleDisconnect;
+
+        OnConnection?.Invoke();
     }
-    [Rpc(SendTo.Server)]
-    private void InstancePlayerRpc(ulong ownerID)
+    public override void OnNetworkDespawn()
     {
-        Transform player = Instantiate(playerPrefab);
-        player.GetComponent<NetworkObject>().SpawnWithOwnership(ownerID, true);
+        if (IsServer)
+            NetworkManager.Singleton.OnClientDisconnectCallback -= HandleDisconnect;
+    }
+    void Start()
+    {
+
+    }
+    private PlayerData Set()
+    {
+        return new PlayerData("accountID", GetRandomPosition(), 100, 5);
+    }
+    private void HandleDisconnect(ulong clientID)
+    {
+
+        print("El jugador" + clientID + "Se a desconectado");
     }
 
-    public static GameManager Instance => instance;
-}
+    [Rpc(SendTo.Server)]
+    public void RegisterPlayerServerRpc(string accountID, ulong ID)
+    {
+        if (!playerStatesByAccountID.TryGetValue(accountID, out PlayerData data))
+        {
+            PlayerData NewData = new PlayerData(accountID, GetRandomPosition(), 100, 5);
+            playerStatesByAccountID[accountID] = NewData;
+            SpawnPlayerServer(ID, NewData);
+            print("Nueva id creada con el nombre de " + accountID);
+        }
+        else
+        {
+            print("Se encontro cuenta con el nombre de " + accountID);
+            SpawnPlayerServer(ID, data);
+        }
+    }
+    public Vector3 GetRandomPosition()
+    {
+        Vector3 randomDirection = Random.insideUnitSphere * radius;
+        print(randomDirection);
+        randomDirection += transform.position;
+        print(randomDirection);
 
+        NavMeshHit hit;
+        if (NavMesh.SamplePosition(randomDirection, out hit, radius, NavMesh.AllAreas))
+        {
+            Debug.Log("Entro");
+            return hit.position;
+        }
+
+        Debug.LogWarning("No se encontró posición válida en el NavMesh.");
+        return transform.position;
+    }
+    public void SpawnPlayerServer(ulong ID, PlayerData data)
+    {
+        if (!IsServer) return;
+        GameObject player = Instantiate(playerPrefab);
+        player.GetComponent<NetworkObject>().SpawnAsPlayerObject(ID, true);
+        player.GetComponent<PlayerController>().SetData(data);
+    }
+
+
+}
