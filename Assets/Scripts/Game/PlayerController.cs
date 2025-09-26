@@ -19,6 +19,7 @@ public class PlayerController : NetworkBehaviour
     }
     private void Update()
     {
+        if(!IsOwner) return;
         float h = Input.GetAxis("Vertical");
         MoveAnimationRpc(h);
     }
