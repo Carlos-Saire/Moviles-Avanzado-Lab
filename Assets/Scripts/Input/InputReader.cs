@@ -5,4 +5,8 @@ using UnityEngine.InputSystem;
 public class InputReader : MonoBehaviour
 {
     public static event Action<Vector2> OnMovePlayer;
+    public void Move(InputAction.CallbackContext context)
+    {
+        OnMovePlayer?.Invoke(context.ReadValue<Vector2>());
+    }
 }
