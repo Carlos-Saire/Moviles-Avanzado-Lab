@@ -1,6 +1,4 @@
 using UnityEngine;
-
-
 using Unity.Services.Authentication;
 using Unity.Services.Core;
 using System.Threading.Tasks;

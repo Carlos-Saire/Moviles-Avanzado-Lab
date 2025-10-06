@@ -1,19 +1,49 @@
 using UnityEngine;
-
 using Unity.Services.Authentication;
 using Unity.Services.Core;
 using System.Threading.Tasks;
 using System;
 using Unity.Services.Authentication.PlayerAccounts;
 using Unity.Services.CloudSave;
-
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
+
+[Serializable]
+public class PlayerData
+{
+    public string playerName;
+    public int level;
+    public int experience;
+    public int experienceToNextLevel;
+    public int skillPoints;
+
+    public int strength;
+    public int defense;
+    public int agility;
+
+    public PlayerData(string name)
+    {
+        playerName = string.IsNullOrEmpty(name) ? "Nuevo Jugador" : name;
+        level = 1;
+        experience = 0;
+        experienceToNextLevel = 100;
+        skillPoints = 0;
+
+        strength = 1;
+        defense = 1;
+        agility = 1;
+    }
+}
+
 public class UnityPlayerAuth : MonoBehaviour
 {
     public event Action<PlayerInfo, string> OnSingedIn;
-    public event Action<String> OnUpdateName;
+    public event Action<string> OnUpdateName;
+
     private PlayerInfo playerInfo;
+    public PlayerData currentPlayerData;
+
+    private const string PLAYER_DATA_KEY = "PlayerData";
 
     private async void Start()
     {
@@ -26,29 +56,19 @@ public class UnityPlayerAuth : MonoBehaviour
     {
         AuthenticationService.Instance.SignedIn += () =>
         {
-            Debug.Log("Player ID " + AuthenticationService.Instance.PlayerId);
-            Debug.Log("Acces Token " + AuthenticationService.Instance.AccessToken);
+            Debug.Log($"Player ID: {AuthenticationService.Instance.PlayerId}");
         };
 
-        AuthenticationService.Instance.SignInFailed += (err) =>
-        {
-            Debug.Log(err);
-        };
-        AuthenticationService.Instance.SignedOut += () =>
-        {
-            Debug.Log("Player log out");
-        };
-        AuthenticationService.Instance.Expired += () =>
-        {
-            Debug.Log("Player session expired");
-        };
+        AuthenticationService.Instance.SignInFailed += (err) => Debug.LogError(err);
+        AuthenticationService.Instance.SignedOut += () => Debug.Log("Player log out");
+        AuthenticationService.Instance.Expired += () => Debug.Log("Session expired");
     }
 
-    //->Lo puedes llamar a traves de un boton
     public async Task InitSignIn()
     {
         await PlayerAccountService.Instance.StartSignInAsync();
     }
+
     private async void SignIn()
     {
         try
@@ -57,30 +77,20 @@ public class UnityPlayerAuth : MonoBehaviour
         }
         catch (Exception ex)
         {
-            Debug.Log(ex);
-        }
-    }
-    private async Task SignInWithUnityAuth()
-    {
-        try
-        {
-            string accessToken = PlayerAccountService.Instance.AccessToken;
-            await AuthenticationService.Instance.SignInWithUnityAsync(accessToken);
-            Debug.Log("Login Succ");
-            playerInfo = AuthenticationService.Instance.PlayerInfo;
-            var name = await AuthenticationService.Instance.GetPlayerNameAsync();
-
-            OnSingedIn?.Invoke(playerInfo, name);
-            Debug.Log("Sign In Successful ");
-        }
-        catch (AuthenticationException ex)
-        {   
             Debug.LogException(ex);
         }
-        catch(RequestFailedException ex)
-        {
-            Debug.Log(ex);
-        }
+    }
+
+    private async Task SignInWithUnityAuth()
+    {
+        string accessToken = PlayerAccountService.Instance.AccessToken;
+        await AuthenticationService.Instance.SignInWithUnityAsync(accessToken);
+        playerInfo = AuthenticationService.Instance.PlayerInfo;
+
+        var name = await AuthenticationService.Instance.GetPlayerNameAsync();
+        OnSingedIn?.Invoke(playerInfo, name);
+
+        await LoadOrCreatePlayerDataAsync(name);
     }
 
     public async Task UpdateName(string newName)
@@ -88,52 +98,112 @@ public class UnityPlayerAuth : MonoBehaviour
         await AuthenticationService.Instance.UpdatePlayerNameAsync(newName);
         var name = await AuthenticationService.Instance.GetPlayerNameAsync();
 
+        if (currentPlayerData != null)
+        {
+            currentPlayerData.playerName = name;
+            await SavePlayerDataAsync();
+        }
+
         OnUpdateName?.Invoke(name);
     }
-    public async Task DeleteAccountUnityAsync()
+
+    [Button(ButtonSizes.Large), GUIColor(0.5f, 1f, 0.5f)]
+    public async Task SavePlayerDataAsync()
+    {
+        if (currentPlayerData == null)
+        {
+            Debug.LogWarning("No hay datos de jugador para guardar.");
+            return;
+        }
+
+        string jsonData = JsonUtility.ToJson(currentPlayerData, true);
+
+        var data = new Dictionary<string, object>
+        {
+            { PLAYER_DATA_KEY, jsonData }
+        };
+
+        await CloudSaveService.Instance.Data.Player.SaveAsync(data);
+        Debug.Log("Datos del jugador guardados como JSON en Cloud Save.");
+    }
+
+    [Button(ButtonSizes.Large), GUIColor(0.8f, 0.9f, 1f)]
+    public async Task LoadOrCreatePlayerDataAsync(string playerName)
     {
         try
         {
-            await AuthenticationService.Instance.DeleteAccountAsync();
+            var result = await CloudSaveService.Instance.Data.Player.LoadAsync(new HashSet<string> { PLAYER_DATA_KEY });
+
+            if (result != null && result.ContainsKey(PLAYER_DATA_KEY))
+            {
+                string jsonData = result[PLAYER_DATA_KEY].Value.GetAsString();
+                currentPlayerData = JsonUtility.FromJson<PlayerData>(jsonData);
+                Debug.Log(" Datos del jugador cargados desde JSON.");
+            }
+            else
+            {
+                Debug.Log("No se encontraron datos. Creando nuevos...");
+                currentPlayerData = new PlayerData(playerName);
+                await SavePlayerDataAsync();
+            }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-
-            throw;
+            Debug.LogError(" Error al cargar datos: " + ex.Message);
+            currentPlayerData = new PlayerData(playerName);
         }
     }
 
-    //-> Cloud Save
-
-
-    [Button]
-    public async void SaveData(string key , string value)
+    [Button(ButtonSizes.Medium), GUIColor(1f, 0.9f, 0.4f)]
+    public void AddExperienceTest()
     {
-        var playerData = new Dictionary<string, object>()
-        {
-            {key, value}
-        };
-
-        await CloudSaveService.Instance.Data.Player.SaveAsync(playerData);
+        AddExperience(50);
     }
-    [Button]
-    public async void LoadData(string key)
+
+    public void AddExperience(int amount)
     {
-        var playerData = await CloudSaveService.Instance.Data.Player.LoadAsync(
-           new HashSet<string> { key } 
-            );
-        if(playerData.TryGetValue(key, out var value))
+        if (currentPlayerData == null)
         {
-            Debug.Log(key + " value : " + value.Value.GetAs<String>());
+            Debug.LogWarning("No hay datos cargados.");
+            return;
         }
 
+        currentPlayerData.experience += amount;
+
+        if (currentPlayerData.experience >= currentPlayerData.experienceToNextLevel)
+        {
+            currentPlayerData.experience -= currentPlayerData.experienceToNextLevel;
+            currentPlayerData.level++;
+            currentPlayerData.skillPoints += 2;
+            currentPlayerData.experienceToNextLevel = Mathf.RoundToInt(currentPlayerData.experienceToNextLevel * 1.2f);
+            Debug.Log(" ¡Subiste de nivel!");
+        }
     }
-    [Button]
-    public async void DeleteData(string key)
+
+    [Button(ButtonSizes.Medium)]
+    public void SpendSkillPoint(string stat)
     {
-        await CloudSaveService.Instance.Data.Player.DeleteAsync(key);
+        if (currentPlayerData == null)
+        {
+            Debug.LogWarning("No hay datos cargados.");
+            return;
+        }
+
+        if (currentPlayerData.skillPoints <= 0)
+        {
+            Debug.LogWarning("No hay puntos disponibles.");
+            return;
+        }
+
+        switch (stat.ToLower())
+        {
+            case "fuerza": currentPlayerData.strength++; break;
+            case "defensa": currentPlayerData.defense++; break;
+            case "agilidad": currentPlayerData.agility++; break;
+            default: Debug.LogWarning("Estadística inválida."); return;
+        }
+
+        currentPlayerData.skillPoints--;
+        Debug.Log($"Aumentaste {stat}. Puntos restantes: {currentPlayerData.skillPoints}");
     }
-
-
-    //
 }
